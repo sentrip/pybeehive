@@ -1,6 +1,8 @@
 import asyncio
+import random
 import pytest
 import beehive.async
+import beehive.async.socket
 from beehive.async.utils import async_generator
 
 
@@ -119,4 +121,19 @@ def async_bee_factory(request):
 @pytest.fixture
 def async_hive():
     return beehive.async.Hive()
+
+
+# Socket client/server
+# ====================
+
+@pytest.fixture
+def async_client_server():
+    loop = asyncio.get_event_loop()
+    port = random.randint(7000, 10000)
+    server = beehive.async.socket.Server(('127.0.0.1', port))
+    client = beehive.async.socket.Client(('127.0.0.1', port))
+    loop.run_until_complete(server.start())
+    loop.run_until_complete(client.connect())
+    return client, server
+
 

@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from ..hive import Hive as SyncHive
 from .core import Listener, Streamer
+from .socket import SocketListener, SocketStreamer
 from .utils import AsyncGenerator
 
 
@@ -30,6 +31,8 @@ class Hive(SyncHive):
 
     _listener_class = Listener
     _streamer_class = Streamer
+    _socket_listener_class = SocketListener
+    _socket_streamer_class = SocketStreamer
 
     def __init__(self):
         super(Hive, self).__init__()
@@ -65,7 +68,6 @@ class Hive(SyncHive):
                     for future in futures:
                         if not future.done():
                             future.cancel()
-        self.loop.close()
 
     def _set_loop(self):
         try:
