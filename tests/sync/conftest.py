@@ -67,3 +67,8 @@ def bee_factory(request):
             request.addfinalizer(bee.teardown)
             return bee
     return BeeFactory()
+
+
+@pytest.fixture
+def hive():
+    return beehive.Hive()
