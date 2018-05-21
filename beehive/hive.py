@@ -6,6 +6,7 @@ from threading import Thread
 
 from .core import Listener, Streamer, Event, Killable
 from .logging import create_logger, debug_handler, default_handler
+from .socket import SocketStreamer, SocketListener
 
 
 def _loop(event_queue, listeners, kill_event):
@@ -26,6 +27,8 @@ class Hive(Killable):
 
     _listener_class = Listener
     _streamer_class = Streamer
+    _socket_listener_class = SocketListener
+    _socket_streamer_class = SocketStreamer
 
     def __init__(self):
         super(Hive, self).__init__()
@@ -75,6 +78,24 @@ class Hive(Killable):
             def wrapper(f):
                 self._create_streamer(f, topic=topic, **kwargs)
             return wrapper
+
+    def socket_listener(self, address, chain=None, filters=None):
+        def wrapped(f):
+            return self.listener(
+                chain=chain, filters=filters,
+                klass=self._socket_listener_class, klass_args=(address,),
+                method_name='parse_event'
+            )(f)
+        return wrapped
+
+    def socket_streamer(self, address, topic=None):
+        def wrapped(f):
+            return self.streamer(
+                topic=topic,
+                klass=self._socket_streamer_class, klass_args=(address,),
+                method_name=None
+            )(f)
+        return wrapped
 
     def submit_event(self, event):
         assert isinstance(event, Event), "Can only submit Events to the Hive"

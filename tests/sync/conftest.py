@@ -1,5 +1,7 @@
 import pytest
+import random
 import beehive
+import beehive.socket
 
 
 # Listener / Streamer
@@ -72,3 +74,14 @@ def bee_factory(request):
 @pytest.fixture
 def hive():
     return beehive.Hive()
+
+
+@pytest.fixture
+def client_server(request):
+    port = random.randint(7000, 10000)
+    server = beehive.socket.Server(('127.0.0.1', port))
+    client = beehive.socket.Client(('127.0.0.1', port))
+    server.start()
+    client.connect()
+    request.addfinalizer(lambda: (client.shutdown(), server.shutdown()))
+    return client, server
