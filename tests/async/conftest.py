@@ -114,3 +114,9 @@ def async_bee_factory(request):
                 bee = PrePython36Streamer()
             return bee
     return BeeFactory()
+
+
+@pytest.fixture
+def async_hive():
+    return beehive.async.Hive()
+
