@@ -1,21 +1,22 @@
 import pickle
 from abc import ABC, abstractmethod
-from hashlib import md5
 from threading import Event as _Event
 from time import time
 
 
 class Event:
     __slots__ = ['data', 'topic', 'id', 'created_at']
-    # todo: test event creation from events with kwargs
-    # todo: change create_id to simpler hashing
 
     def __init__(self, data, topic=None, created_at=None):
         if isinstance(data, Event):
             self.data = data.data
-            self.topic = data.topic
-            self.id = data.id
-            self.created_at = data.created_at
+            self.topic = topic or data.topic
+            if created_at:
+                self.created_at = created_at
+                self.id = self.create_id(self.data, created_at)
+            else:
+                self.created_at = data.created_at
+                self.id = data.id
         else:
             self.data = data
             self.topic = topic
@@ -31,7 +32,7 @@ class Event:
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash(self.id)
+        return self.id
 
     def __str__(self):
         return 'Event(created_at={}, data={})'.format(
@@ -40,7 +41,7 @@ class Event:
 
     @staticmethod
     def create_id(data, time_created):
-        return md5((str(data) + str(time_created)).encode()).hexdigest()
+        return hash(str(data) + str(time_created))
 
     @staticmethod
     def fromstring(string):

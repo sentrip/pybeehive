@@ -35,17 +35,34 @@ def test_event_string_conversion(data, topic, created_at):
     assert event == c_event, "String converted event not equal to original"
 
 
-def test_event_id_and_creation():
+def test_create_event_id():
     now = time.time()
     id_1 = beehive.Event.create_id('test', now)
     id_2 = beehive.Event.create_id('test', now)
     id_3 = beehive.Event.create_id('test', now + 1)
     assert id_1 == id_2, 'Different ids for identical data'
     assert id_1 != id_3 != id_2, 'Same ids for different data'
-    event = beehive.Event('test', created_at=now)
-    assert event.id == id_1, "Event did not create id correctly"
-    event_2 = beehive.Event(event)
-    assert event_2 == event, "Event did not create correctly from another Event"
+
+
+def test_create_event():
+    now = time.time()
+    same_1 = beehive.Event('test', created_at=now)
+    same_2 = beehive.Event(same_1)
+    assert same_1 == same_2, \
+        "Event did not create correctly from another Event"
+    diff_1 = beehive.Event('test', topic='1', created_at=now)
+    diff_2 = beehive.Event('test', topic='2', created_at=now)
+    diff_3 = beehive.Event('test', topic='1', created_at=now + 1)
+    diff_4 = beehive.Event('test1', topic='1', created_at=now)
+    assert diff_1 != diff_2, "Events with different topics equal"
+    assert diff_2 != diff_3, "Events with different created_at equal"
+    assert diff_3 != diff_4, "Events with different data equal"
+    diff_5 = beehive.Event(diff_1, topic='2')
+    diff_6 = beehive.Event(diff_1, created_at=now + 1)
+    assert diff_1 != diff_5, "Event created from event with new topic equal"
+    assert diff_1 != diff_6, "Event created from event with new time equal"
+    assert diff_5.topic == '2', 'Did not override topic correctly'
+    assert diff_6.created_at == now + 1, 'Did not override time correctly'
 
 
 def test_event_dunder_methods():
