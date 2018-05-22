@@ -1,5 +1,7 @@
 import pytest
 import random
+import sys, os
+sys.path.append(os.path.abspath('../beehive'))
 import beehive
 import beehive.socket
 

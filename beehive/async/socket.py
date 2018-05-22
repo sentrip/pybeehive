@@ -1,4 +1,3 @@
-from multiprocessing import Event as _MP_Event
 import asyncio
 try:
     import zmq
@@ -12,6 +11,9 @@ from .utils import AsyncGenerator
 
 
 class Server(Killable):
+
+    _event_class = asyncio.Event
+
     def __init__(self, address):
         super(Server, self).__init__()
         self.address = address
@@ -64,9 +66,11 @@ class Server(Killable):
 
 
 class Client(Killable):
+
+    _event_class = asyncio.Event
+
     def __init__(self, address):
         super(Client, self).__init__()
-        self.kill_event = _MP_Event()
         self.address = address
         self.context = Context.instance()
         self.socket = self.context.socket(zmq.PUSH)

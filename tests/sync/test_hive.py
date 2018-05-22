@@ -3,16 +3,20 @@ import pytest
 import beehive
 
 from multiprocessing import Event as _Event
-from threading import Thread
+from queue import Queue, Empty
+from threading import Thread, Event
 
 
 def run_kill_hive(hive, **kwargs):
     wait = kwargs.pop('wait', 0.03)
-    runner = Thread(target=hive.run, kwargs=kwargs)
-    runner.daemon = True
+
+    def kill_after():
+        time.sleep(wait)
+        hive.kill()
+
+    runner = Thread(target=kill_after)
     runner.start()
-    time.sleep(wait)
-    hive.kill()
+    hive.run(**kwargs)
 
 
 def test_run(hive, bee_factory):
@@ -157,6 +161,32 @@ def test_decorated_streamer_with_topic(hive, bee_factory):
     assert listener.calls[0].topic == 'topic1', 'Streamer did not yield correct data'
 
 
+def test_only_streamers(hive):
+    q = Queue()
+    d = {'count': 0}
+
+    @hive.streamer
+    def publish():
+        while True:
+            q.put(1)
+            yield
+
+    @hive.streamer
+    def pull():
+        while True:
+            try:
+                q.get(timeout=0.001)
+            except Empty:
+                yield
+            else:
+                d['count'] += 1
+                yield
+
+    run_kill_hive(hive)
+    hive.close()
+    assert d['count'] > 0, 'Did not get any data from queue'
+
+
 def test_threaded_run(hive, bee_factory):
     listener = bee_factory.create('listener')
     hive.add(listener)
@@ -173,3 +203,55 @@ def test_threaded_run(hive, bee_factory):
     hive.kill()
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
     assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+
+
+def test_close_hive(hive):
+    run = Event()
+
+    @hive.streamer
+    def stream():
+        while True:
+            yield 1
+
+    @hive.listener
+    def on_event(event):
+        run.set()
+
+    def close_after():
+        run.wait()
+        hive.close()
+
+    Thread(target=close_after).start()
+    hive.run()
+    assert run.is_set(), 'Did not run on_event before close'
+
+
+def test_close_hive_only_streamers(hive):
+    q = Queue()
+    d = {'count': 0}
+
+    @hive.streamer
+    def publish():
+        while True:
+            time.sleep(1e-4)
+            q.put(1)
+            yield
+
+    @hive.streamer
+    def pull():
+        while True:
+            try:
+                q.get(timeout=0.001)
+            except Empty:
+                yield
+            else:
+                d['count'] += 1
+                yield
+
+    def close_after():
+        time.sleep(1e-3)
+        hive.close()
+
+    Thread(target=close_after).start()
+    hive.run()
+    assert d['count'] > 0, 'Did not get any data from queue'

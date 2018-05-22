@@ -28,6 +28,9 @@ class Listener(SyncListener):
 
 
 class Streamer(SyncStreamer):
+
+    _event_class = asyncio.Event
+
     @abstractmethod
     async def stream(self):
         raise NotImplementedError
@@ -49,5 +52,7 @@ class Streamer(SyncStreamer):
                         # break long running streams if the kill event is set
                         if not self.alive:
                             break
+            except KeyboardInterrupt:  # need explicit catch here
+                self.kill()
             except Exception as e:
                 self.on_exception(e)

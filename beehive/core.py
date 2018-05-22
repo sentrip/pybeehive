@@ -7,6 +7,8 @@ from time import time
 
 class Event:
     __slots__ = ['data', 'topic', 'id', 'created_at']
+    # todo: test event creation from events with kwargs
+    # todo: change create_id to simpler hashing
 
     def __init__(self, data, topic=None, created_at=None):
         if isinstance(data, Event):
@@ -142,16 +144,15 @@ class Streamer(Killable, ABC):
 
     def run(self):
         self._assert_queue_is_set()
-        stream = self.stream()
         while self.alive:
             try:
-                event = Event(next(stream), topic=self.topic)
-            except StopIteration:
-                stream = self.stream()
+                for data in self.stream():
+                    self._q.put(Event(data, topic=self.topic))
+                    # break long running streams if the kill event is set
+                    if not self.alive:
+                        break
             except Exception as e:
                 self.on_exception(e)
-            else:
-                self._q.put(event)
 
     def _assert_queue_is_set(self):
         assert self._q is not None, \

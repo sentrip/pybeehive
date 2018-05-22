@@ -12,10 +12,7 @@ class AsyncContextManager:
         if exc_val is not None:
             raise exc_type(exc_val).with_traceback(exc_tb)
         else:
-            try:
-                await self.gen.__anext__()
-            except StopAsyncIteration:
-                return
+            self.gen.aclose()
 
 
 class AsyncGenerator:

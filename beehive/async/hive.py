@@ -1,6 +1,6 @@
+from contextlib import contextmanager
 import asyncio
 import inspect
-from contextlib import contextmanager
 
 from ..hive import Hive as SyncHive
 from .core import Listener, Streamer
@@ -10,25 +10,22 @@ from .utils import AsyncGenerator
 
 async def _loop_async(event_queue, listeners, kill_event):
     while not kill_event.is_set():
+        # This try except mimics 'await queue.get()',
+        # but continuously yields control back to loop
+        # in order to allow graceful shutdown
         try:
-            # This try except mimics 'await queue.get()',
-            # but continuously yields control back to loop
-            # in order to allow graceful shutdown
-            try:
-                event = event_queue.get_nowait()
-            except asyncio.QueueEmpty:
-                await asyncio.sleep(0)
-                continue
-            else:
-                await asyncio.gather(*[
+            event = event_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(1e-3)
+        else:
+            await asyncio.gather(*[
                     bee.notify(event) for bee in listeners
                 ])
-        except KeyboardInterrupt:
-            break
 
 
 class Hive(SyncHive):
 
+    _event_class = asyncio.Event
     _listener_class = Listener
     _streamer_class = Streamer
     _socket_listener_class = SocketListener
@@ -54,20 +51,22 @@ class Hive(SyncHive):
         with self._setup_teardown_streamers() as jobs:
             with self._setup_teardown_listeners():
                 futures = [asyncio.ensure_future(j) for j in jobs]
-                try:
-                    self.loop.run_until_complete(_loop_async(
+                task = asyncio.ensure_future(asyncio.gather(
+                    *futures,
+                    _loop_async(
                         self._event_queue, self.listeners, self.kill_event
-                    ))
-                    self.logger.info("The Hive is now live!")
-
-                    # Wait for streamer futures created in setup
-                    if futures:
-                        self.loop.run_until_complete(asyncio.wait(futures))
-                except KeyboardInterrupt:  # Need explicit catch here
-                    self.logger.debug("Shutting down hive...")
+                    )
+                ))
+                try:
+                    self.logger.info("The hive is now live!")
+                    self.loop.run_until_complete(task)
+                except KeyboardInterrupt:
+                    pass  # Need explicit catch here
+                finally:
+                    self.logger.info("Shutting down hive...")
+                    task.cancel()
                     for future in futures:
-                        if not future.done():
-                            future.cancel()
+                        future.cancel()
 
     def _set_loop(self):
         try:
@@ -88,15 +87,15 @@ class Hive(SyncHive):
 
     @contextmanager
     def _setup_teardown_streamers(self):
-        all_jobs = self.loop.run_until_complete(asyncio.gather(*[
-            self._setup_streamer(s) for s in self.streamers
-        ]))
+        all_jobs = self.loop.run_until_complete(asyncio.gather(
+            *[self._setup_streamer(s) for s in self.streamers]
+        ))
 
         yield list(filter(lambda j: False if j is None else True, all_jobs))
 
-        self.loop.run_until_complete(asyncio.gather(*[
-            self._teardown_streamer(s) for s in self.streamers
-        ]))
+        self.loop.run_until_complete(asyncio.gather(
+            *[self._teardown_streamer(s) for s in self.streamers]
+        ))
 
     async def _setup_streamer(self, streamer):
         try:
@@ -108,8 +107,8 @@ class Hive(SyncHive):
             return streamer.run()
 
     async def _teardown_streamer(self, streamer):
+        streamer.kill()
         try:
-            streamer.kill()
             await streamer.teardown()
         except Exception as e:
             self.logger.exception("Tearing down %s - %s", streamer, repr(e))

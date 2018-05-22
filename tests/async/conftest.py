@@ -1,6 +1,8 @@
 import asyncio
 import random
 import pytest
+import sys, os
+sys.path.append(os.path.abspath('../beehive'))
 import beehive.async
 import beehive.async.socket
 from beehive.async.utils import async_generator

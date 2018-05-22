@@ -35,7 +35,6 @@ class Hive(Killable):
         self.streamers = []
         self.listeners = _ListenerTree()
         self._event_queue = Queue()
-        self._pool = None
 
         self.logger = create_logger(handler=default_handler)
 
@@ -142,13 +141,11 @@ class Hive(Killable):
     def _run(self):
         with self._setup_teardown_streamers():
             with self._setup_teardown_listeners():
-                self.logger.info("The Hive is now live!")
+                self.logger.info("The hive is now live!")
                 try:
                     _loop(self._event_queue, self.listeners, self.kill_event)
                 finally:
-                    self.logger.debug("Shutting down hive...")
-        if self._pool:
-            self._pool.shutdown()
+                    self.logger.info("Shutting down hive...")
 
     @contextmanager
     def _setup_teardown_listeners(self):
@@ -174,13 +171,14 @@ class Hive(Killable):
             self.logger.exception("Setting up %s - %s", streamer, repr(e))
         else:
             self.logger.debug("Setting up %s - OK", streamer)
-            streamer._streamer_thread = Thread(target=streamer.run)
-            streamer._streamer_thread.start()
+            streamer.thread = Thread(target=streamer.run)
+            streamer.thread.start()
 
     def _teardown_streamer(self, streamer):
         try:
             streamer.kill()
             streamer.teardown()
+            streamer.thread.join()
         except Exception as e:
             self.logger.exception("Tearing down %s - %s", streamer, repr(e))
 

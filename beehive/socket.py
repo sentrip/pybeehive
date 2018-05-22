@@ -1,4 +1,3 @@
-from multiprocessing import Event as _MP_Event
 from queue import Empty, Queue
 from threading import Thread
 import time
@@ -52,7 +51,6 @@ class Server(Killable):
 class Client(Killable):
     def __init__(self, address):
         super(Client, self).__init__()
-        self.kill_event = _MP_Event()
         self.address = address
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.PUSH)

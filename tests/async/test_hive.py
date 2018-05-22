@@ -9,9 +9,9 @@ from beehive.async.hive import _loop_async
 from threading import Thread, Event as _Event
 
 
-def run_kill_hive(hive):
+def run_kill_hive(hive, wait=0.005):
     async def kill():
-        await asyncio.sleep(0.005)
+        await asyncio.sleep(wait)
         hive.kill()
     loop = asyncio.get_event_loop()
 
@@ -20,12 +20,14 @@ def run_kill_hive(hive):
         with hive._setup_teardown_streamers() as jobs:
             futures = [asyncio.ensure_future(j) for j in jobs]
             loop.run_until_complete(asyncio.gather(
+                kill(),
                 _loop_async(
                     hive._event_queue, hive.listeners, hive.kill_event
-                ),
-                kill()
+                )
             ))
-    loop.run_until_complete(asyncio.gather(*futures))
+    for future in futures:
+        if not future.done():
+            future.cancel()
 
 
 def test_run(async_hive, async_bee_factory):
@@ -117,6 +119,33 @@ def test_decorated_streamer_pre_python36_closure(async_hive, async_bee_factory):
     assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
 
 
+def test_only_streamers(async_hive):
+    q = asyncio.Queue()
+    d = {'count': 0}
+
+    @async_hive.streamer
+    @async_generator
+    async def publish():
+        await q.put(1)
+        # need to yield some time to event loop
+        # or the test never returns
+        await asyncio.sleep(1e-5)
+
+    @async_hive.streamer
+    @async_generator
+    async def pull():
+        try:
+            q.get_nowait()
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(1e-4)
+        else:
+            d['count'] += 1
+
+    run_kill_hive(async_hive)
+    async_hive.close()
+    assert d['count'] > 0, 'Did not get any data from queue'
+
+
 def test_threaded_run(async_hive, async_bee_factory):
     listener = async_bee_factory.create('listener')
     async_hive.add(listener)
@@ -140,3 +169,56 @@ def test_threaded_run(async_hive, async_bee_factory):
     async_hive.close()
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
     assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+
+
+def test_close_hive(async_hive):
+    run = _Event()
+
+    @async_hive.streamer
+    @async_generator
+    async def stream():
+        await asyncio.sleep(1e-6)
+        return 1
+
+    @async_hive.listener
+    async def on_event(event):
+        run.set()
+
+    def close_after():
+        run.wait()
+        async_hive.close()
+
+    Thread(target=close_after).start()
+    async_hive.run()
+    assert run.is_set(), 'Did not run on_event before close'
+
+
+def test_close_hive_only_streamers(async_hive):
+    q = asyncio.Queue()
+    d = {'count': 0}
+
+    @async_hive.streamer
+    @async_generator
+    async def publish():
+        await q.put(1)
+        # need to yield some time to event loop
+        # or the test never returns
+        await asyncio.sleep(1e-5)
+
+    @async_hive.streamer
+    @async_generator
+    async def pull():
+        try:
+            q.get_nowait()
+        except asyncio.QueueEmpty:
+            await asyncio.sleep(1e-5)
+        else:
+            d['count'] += 1
+
+    def close_after():
+        time.sleep(1e-3)
+        async_hive.close()
+
+    Thread(target=close_after).start()
+    async_hive.run()
+    assert d['count'] > 0, 'Did not get any data from queue'
