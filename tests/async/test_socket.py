@@ -1,11 +1,29 @@
+from threading import Thread
+import asyncio
 import random
 import time
 import pytest
-import beehive
+import _thread
+
 from beehive.async.socket import SocketListener, SocketStreamer
+import beehive
 
 
-# If run_in_new_loop is not the first argument things break
+def test_no_zmq(async_hive):
+    async_hive._socket_listener_class = None
+    async_hive._socket_streamer_class = None
+
+    with pytest.raises(RuntimeError):
+        async_hive.socket_listener(('', 0))(lambda: None)
+
+    with pytest.raises(RuntimeError):
+        async_hive.socket_streamer(('', 0))(lambda: None)
+
+    async_hive._socket_listener_class = SocketListener
+    async_hive._socket_streamer_class = SocketStreamer
+
+
+# If run_in_new_loop is not the first argument, things break
 def test_messaging(run_in_new_loop, async_client_server):
     client, server = async_client_server
 
@@ -80,17 +98,45 @@ def test_message_closed_server(async_hive):
 
     @async_hive.socket_listener(address)
     async def parse_event(event):
-        event = beehive.Event(event.data + 1, created_at=event.created_at)
         events.append(event)
         return event
 
-    # The test here is that no errors are raised when
-    # messages are sent to a non-existent server
-    # and the client does not block on exit
     async_hive.submit_event(beehive.Event(-1))
     async_hive.run(threaded=True)
     start = time.time()
     while len(events) < 1 and time.time() - start < 2:
         time.sleep(1e-4)
-    assert len(events) >= 1, "Hive did not process all events"
     async_hive.kill()
+    assert len(events) >= 1, "Hive did not process all events"
+
+
+# This test can pass, but due to the inconsistent handling of
+# KeyboardInterrupt in zmq.asyncio.Socket.send it does not
+# pass consistently and is thus skipped in the normal tests.
+# If pyzmq is updated to fix this the skip can be removed.
+@pytest.mark.skip
+def test_interrupted_streamer_listener_loop(async_hive):
+    address = '127.0.0.1', random.randint(7000, 10000)
+    events = []
+
+    def interrupt():
+        time.sleep(1e-2)
+        _thread.interrupt_main()
+
+    async def parse_event(event):
+        await asyncio.sleep(1e-4)
+        events.append(event)
+        return event
+
+    streamer = SocketStreamer(address)
+    listener = SocketListener(address)
+    listener.parse_event = parse_event
+    async_hive.add(streamer)
+    async_hive.add(listener)
+    async_hive.submit_event(beehive.Event(-1))
+    Thread(target=interrupt).start()
+    async_hive.run()
+    assert len(events) > 1, "Listener did not receive any events from streamer"
+    assert not async_hive.alive, 'KeyboardInterrupt did not kill hive'
+    assert not streamer.server.alive, 'KeyboardInterrupt did not kill server'
+    assert not listener.client.alive, 'KeyboardInterrupt did not kill client'

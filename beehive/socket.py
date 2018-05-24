@@ -1,11 +1,8 @@
 from queue import Empty, Queue
 from threading import Thread
 import time
+import zmq
 from .core import Streamer, Listener, Event, Killable
-try:
-    import zmq
-except ImportError:
-    raise ImportError('pyzmq required for beehive.socket/beehive.async.socket')
 
 
 class Server(Killable):
@@ -29,13 +26,10 @@ class Server(Killable):
     def iter_messages(self):
         while not self.kill_event.is_set():
             try:
-                try:
-                    msg = self.queue.get(timeout=0.001)
-                    yield msg
-                except Empty:
-                    continue
-            except KeyboardInterrupt:
-                self.kill_event.set()
+                msg = self.queue.get(timeout=0.001)
+                yield msg
+            except Empty:
+                continue
 
     def start(self):
         self.socket.bind("tcp://%s:%s" % self.address)
@@ -44,7 +38,10 @@ class Server(Killable):
 
     def shutdown(self):
         self.kill()
-        self._listener_thread.join()
+        try:
+            self._listener_thread.join()
+        except AttributeError:
+            pass  # there was an error in start, so _listener_thread is None
         self.socket.close(linger=0)
 
 
@@ -57,11 +54,7 @@ class Client(Killable):
 
     def send(self, data):
         while self.alive:
-            try:
-                self.socket.send(data, flags=zmq.constants.NOBLOCK)
-                return
-            except zmq.error.ZMQError:
-                time.sleep(1e-6)
+            return self.socket.send(data, flags=zmq.NOBLOCK)
 
     def connect(self):
         self.socket.connect('tcp://%s:%s' % self.address)
@@ -102,7 +95,8 @@ class SocketListener(Listener):
         self.client.shutdown()
 
     def on_event(self, event):
-        self.client.send(self.parse_event(event).tostring())
+        result = self.parse_event(event)
+        self.client.send(result.tostring())
 
     def parse_event(self, event):
         return event

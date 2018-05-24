@@ -1,9 +1,6 @@
+from zmq.asyncio import Context, Poller
 import asyncio
-try:
-    import zmq
-    from zmq.asyncio import Context, Poller
-except ImportError:
-    raise ImportError('pyzmq required for beehive.socket/beehive.async.socket')
+import zmq
 
 from ..core import Event, Killable
 from .core import Streamer, Listener
@@ -33,13 +30,12 @@ class Server(Killable):
                     await self.queue.put(data)
             except zmq.error.ZMQError:
                 await asyncio.sleep(1e-4)
-            except KeyboardInterrupt:
-                break
 
     async def start(self):
         self.socket.bind('tcp://%s:%s' % self.address)
         self.poller.register(self.socket, zmq.POLLIN)
         self._listen_future = asyncio.ensure_future(self._receive_into_queue())
+        await asyncio.sleep(0)
 
     async def shutdown(self):
         self.kill()
@@ -47,21 +43,19 @@ class Server(Killable):
         if self._listen_future is not None and not self._listen_future.done():
             self._listen_future.cancel()
         self.socket.close(linger=0)
+        await asyncio.sleep(0)
 
     def iter_messages(self):
 
         async def wrapped():
-            try:
-                while self.alive:
-                    try:
-                        result = self.queue.get_nowait()
-                    except asyncio.QueueEmpty:
-                        await asyncio.sleep(0)
-                    else:
-                        await asyncio.sleep(0)
-                        return result
-            except KeyboardInterrupt:
-                return
+            while self.alive:
+                try:
+                    result = self.queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    await asyncio.sleep(1e-6)
+                else:
+                    await asyncio.sleep(0)
+                    return result
         return AsyncGenerator(wrapped)
 
 
@@ -77,18 +71,16 @@ class Client(Killable):
 
     async def connect(self):
         self.socket.connect('tcp://%s:%s' % self.address)
+        await asyncio.sleep(0)
 
     async def send(self, data):
         while self.alive:
-            try:
-                await self.socket.send(data, flags=zmq.constants.NOBLOCK)
-                return
-            except zmq.error.ZMQError:
-                await asyncio.sleep(1e-6)
+            return await self.socket.send(data, flags=zmq.NOBLOCK)
 
     async def shutdown(self):
         self.kill()
         self.socket.close(linger=0)
+        await asyncio.sleep(0)
 
 
 class SocketStreamer(Streamer):
@@ -113,7 +105,6 @@ class SocketStreamer(Streamer):
                 return Event(
                     event.data, topic=self.topic, created_at=event.created_at
                 )
-            raise StopAsyncIteration
 
         return AsyncGenerator(wrapped)
 

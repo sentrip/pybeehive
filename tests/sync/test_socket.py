@@ -1,9 +1,25 @@
+from threading import Thread
 import random
 import time
+import pytest
+import _thread
 
 from beehive.socket import SocketStreamer, SocketListener
 import beehive
-import pytest
+
+
+def test_no_zmq(hive):
+    hive._socket_listener_class = None
+    hive._socket_streamer_class = None
+
+    with pytest.raises(RuntimeError):
+        hive.socket_listener(('', 0))(lambda: None)
+
+    with pytest.raises(RuntimeError):
+        hive.socket_streamer(('', 0))(lambda: None)
+
+    hive._socket_listener_class = SocketListener
+    hive._socket_streamer_class = SocketStreamer
 
 
 def test_messaging(client_server):
@@ -101,17 +117,41 @@ def test_message_closed_server(hive):
 
     @hive.socket_listener(address)
     def parse_event(event):
-        event = beehive.Event(event.data + 1, created_at=event.created_at)
         events.append(event)
         return event
 
-    # The test here is that no errors are raised when
-    # messages are sent to a non-existent server
-    # and the client does not block on exit
     hive.submit_event(beehive.Event(-1))
     hive.run(threaded=True)
     start = time.time()
     while len(events) < 1 and time.time() - start < 2:
         time.sleep(1e-4)
+    hive.close()
     assert len(events) >= 1, "Hive did not process all events"
-    hive.kill()
+
+
+def test_interrupted_streamer_listener_loop(hive):
+    address = '127.0.0.1', random.randint(7000, 10000)
+    events = []
+
+    def interrupt():
+        while len(events) < 2:
+            time.sleep(1e-3)
+        _thread.interrupt_main()
+
+    def parse_event(event):
+        events.append(event)
+        return event
+
+    streamer = SocketStreamer(address)
+    listener = SocketListener(address)
+    listener.parse_event = parse_event
+    hive.add(streamer)
+    hive.add(listener)
+    hive.submit_event(beehive.Event(-1))
+    Thread(target=interrupt).start()
+    hive.run()
+    assert len(events) > 1, "Listener did not receive any events from streamer"
+    assert not hive.alive, 'KeyboardInterrupt did not kill hive'
+    assert not streamer.server.alive, 'KeyboardInterrupt did not kill server'
+    assert not listener.client.alive, 'KeyboardInterrupt did not kill client'
+
