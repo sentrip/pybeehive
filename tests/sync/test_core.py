@@ -154,6 +154,9 @@ def test_chained_notify(bee_factory):
     assert len(listener3.calls) == 1, 'Second chained on_event did not trigger'
     assert isinstance(listener2.calls[0], beehive.Event), 'Did convert data to event in chained on_event'
     assert isinstance(listener3.calls[0], beehive.Event), 'Did convert data to event in chained on_event'
+    listener1.notify(None)
+    assert len(listener2.calls) == 1, 'First chained on_event triggered on None'
+    assert len(listener3.calls) == 1, 'Second chained on_event triggered on None'
 
 
 def test_notify_with_exception(bee_factory):
@@ -166,7 +169,8 @@ def test_chained_notify_with_exception(bee_factory):
     listener1 = bee_factory.create('listener', failing=True)
     listener2 = bee_factory.create('listener', failing=True)
     listener3 = bee_factory.create('listener', failing=True)
-    listener1.chain(listener2).chain(listener3)
+    # Ensure both ways of calling work
+    beehive.Listener.chain([listener1], listener2).chain(listener3)
     listener1.notify(1)
     assert len(listener2.calls) == 0, 'First chained on_event triggered'
     assert len(listener3.calls) == 0, 'Second chained on_event triggered'

@@ -60,15 +60,13 @@ class Listener(ABC):
     def __str__(self):
         return "%s(filters=%s)" % (self.__class__.__name__, self.filters)
 
-    def chain(self, bee, *bees):
+    def chain(self, bee):
         # static usage with list for many-to-one
         if isinstance(self, list):
             for other in self:
                 other.chain(bee)
         else:
             self.chained_bees.append(bee)
-            for other in bees:
-                self.chained_bees.append(other)
         return bee
 
     def filter(self, event):
