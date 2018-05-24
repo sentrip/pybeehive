@@ -1,12 +1,13 @@
+from threading import Thread, Event as _Event
 import asyncio
 import time
 import pytest
+import _thread
 
 import beehive
 import beehive.async
 from beehive.async import async_generator
 from beehive.async.hive import _loop_async
-from threading import Thread, Event as _Event
 
 
 def run_kill_hive(hive, wait=0.005):
@@ -124,7 +125,6 @@ def test_only_streamers(async_hive):
     d = {'count': 0}
 
     @async_hive.streamer
-    @async_generator
     async def publish():
         await q.put(1)
         # need to yield some time to event loop
@@ -132,7 +132,6 @@ def test_only_streamers(async_hive):
         await asyncio.sleep(1e-5)
 
     @async_hive.streamer
-    @async_generator
     async def pull():
         try:
             q.get_nowait()
@@ -140,6 +139,7 @@ def test_only_streamers(async_hive):
             await asyncio.sleep(1e-4)
         else:
             d['count'] += 1
+            await asyncio.sleep(0)
 
     run_kill_hive(async_hive)
     async_hive.close()
@@ -183,6 +183,7 @@ def test_close_hive(async_hive):
     @async_hive.listener
     async def on_event(event):
         run.set()
+        await asyncio.sleep(0)
 
     def close_after():
         run.wait()
@@ -214,6 +215,7 @@ def test_close_hive_only_streamers(async_hive):
             await asyncio.sleep(1e-5)
         else:
             d['count'] += 1
+            await asyncio.sleep(0)
 
     def close_after():
         time.sleep(1e-3)
@@ -222,3 +224,56 @@ def test_close_hive_only_streamers(async_hive):
     Thread(target=close_after).start()
     async_hive.run()
     assert d['count'] > 0, 'Did not get any data from queue'
+
+
+def test_interrupted_run(async_hive):
+    def interrupt():
+        time.sleep(5e-3)
+        _thread.interrupt_main()
+
+    @async_hive.streamer
+    @async_generator
+    async def stream():
+        await asyncio.sleep(1e-6)
+        return 1
+
+    Thread(target=interrupt).start()
+    async_hive.run()
+    assert not async_hive.alive, 'KeyboardInterrupt did not kill hive'
+
+
+def test_setup_teardown_exceptions(async_hive, async_bee_factory):
+    l_failed_setup = async_bee_factory.create('listener')
+    l_failed_teardown = async_bee_factory.create('listener')
+    l_failed_both = async_bee_factory.create('listener')
+    s_failed_setup = async_bee_factory.create('streamer')
+    s_failed_teardown = async_bee_factory.create('streamer')
+    s_failed_both = async_bee_factory.create('streamer')
+
+    async def fail(*args, **kwargs):
+        raise ValueError
+
+    for bee in [l_failed_setup, s_failed_setup, l_failed_both, s_failed_both]:
+        bee.setup = fail
+    for bee in [l_failed_teardown, s_failed_teardown, l_failed_both, s_failed_both]:
+        bee.teardown = fail
+
+    for bee in [
+        l_failed_setup, s_failed_setup,
+        l_failed_teardown, s_failed_teardown,
+        l_failed_both, s_failed_both
+    ]:
+        async_hive.add(bee)
+
+    run_kill_hive(async_hive)
+
+    for bee in [l_failed_teardown, l_failed_setup, l_failed_both]:
+        assert len(bee.calls) > 0, 'Listener with failed setup did not run'
+
+    for bee in [s_failed_teardown, s_failed_setup, s_failed_both]:
+        assert bee.count > 0, 'Streamer with failed setup did not run'
+
+    assert l_failed_setup.teardown_event.is_set(), \
+        'Did not attempt to teardown listener with failed setup'
+    assert s_failed_setup.teardown_event.is_set(), \
+        'Did not attempt to teardown streamer with failed setup'

@@ -1,10 +1,10 @@
-import time
-import pytest
-import beehive
-
 from multiprocessing import Event as _Event
 from queue import Queue, Empty
 from threading import Thread, Event
+import time
+import _thread
+import pytest
+import beehive
 
 
 def run_kill_hive(hive, **kwargs):
@@ -24,7 +24,9 @@ def test_run(hive, bee_factory):
     streamer = bee_factory.create('streamer')
     hive.add(listener)
     hive.add(streamer)
-    run_kill_hive(hive)
+    # Run once in debug mode to make sure,
+    # but this should never cause errors
+    run_kill_hive(hive, debug=True)
     assert len(listener.calls) > 0, 'Run did not yield any events'
     assert isinstance(listener.calls[0], beehive.Event), 'Run did not wrap non event data'
 
@@ -255,3 +257,67 @@ def test_close_hive_only_streamers(hive):
     Thread(target=close_after).start()
     hive.run()
     assert d['count'] > 0, 'Did not get any data from queue'
+
+
+def test_interrupted_run(hive):
+    def interrupt():
+        time.sleep(5e-3)
+        _thread.interrupt_main()
+
+    @hive.streamer
+    def stream():
+        while True:
+            time.sleep(1e-6)
+            return 1
+
+    Thread(target=interrupt).start()
+    hive.run()
+    assert not hive.alive, 'KeyboardInterrupt did not kill hive'
+
+
+def test_define_with_bad_args(hive):
+    with pytest.raises(TypeError):
+        hive.streamer(topic={'a': 1})(lambda: None)
+
+    with pytest.raises(TypeError):
+        hive.listener(chain=2)(lambda: None)
+
+    with pytest.raises(TypeError):
+        hive.listener(filters={'a': 1})(lambda: None)
+
+
+def test_setup_teardown_exceptions(hive, bee_factory):
+    l_failed_setup = bee_factory.create('listener')
+    l_failed_teardown = bee_factory.create('listener')
+    l_failed_both = bee_factory.create('listener')
+    s_failed_setup = bee_factory.create('streamer')
+    s_failed_teardown = bee_factory.create('streamer')
+    s_failed_both = bee_factory.create('streamer')
+
+    def fail(*args, **kwargs):
+        raise ValueError
+
+    for bee in [l_failed_setup, s_failed_setup, l_failed_both, s_failed_both]:
+        bee.setup = fail
+    for bee in [l_failed_teardown, s_failed_teardown, l_failed_both, s_failed_both]:
+        bee.teardown = fail
+
+    for bee in [
+        l_failed_setup, s_failed_setup,
+        l_failed_teardown, s_failed_teardown,
+        l_failed_both, s_failed_both
+    ]:
+        hive.add(bee)
+
+    run_kill_hive(hive)
+
+    for bee in [l_failed_teardown, l_failed_setup, l_failed_both]:
+        assert len(bee.calls) > 0, 'Listener with failed setup did not run'
+
+    for bee in [s_failed_teardown, s_failed_setup, s_failed_both]:
+        assert bee.count > 0, 'Streamer with failed setup did not run'
+
+    assert l_failed_setup.teardown_event.is_set(), \
+        'Did not attempt to teardown listener with failed setup'
+    assert s_failed_setup.teardown_event.is_set(), \
+        'Did not attempt to teardown streamer with failed setup'

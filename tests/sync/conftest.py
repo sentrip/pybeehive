@@ -1,3 +1,4 @@
+from threading import Event as _Event
 import pytest
 import random
 import sys, os
@@ -14,6 +15,15 @@ class TestListener(beehive.Listener):
         super(TestListener, self).__init__(filters=filters)
         self.calls = []
         self.closed = False
+        self.setup_event = _Event()
+        self.teardown_event = _Event()
+
+    def setup(self):
+        self.setup_event.set()
+
+    def teardown(self):
+        self.closed = True
+        self.teardown_event.set()
 
     def failed_on_event(self, event):
         raise Exception
@@ -26,15 +36,20 @@ class TestListener(beehive.Listener):
         with open(str(event.data) + '.txt', 'w') as f:
             f.write('success')
 
-    def teardown(self):
-        self.closed = True
-
 
 class TestStreamer(beehive.Streamer):
     def __init__(self, topic=None):
         super(TestStreamer, self).__init__(topic=topic)
         self.count = 0
         self.ex = False
+        self.setup_event = _Event()
+        self.teardown_event = _Event()
+
+    def setup(self):
+        self.setup_event.set()
+
+    def teardown(self):
+        self.teardown_event.set()
 
     def stream(self):
         for i in range(10):

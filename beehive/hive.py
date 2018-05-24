@@ -6,7 +6,10 @@ from threading import Thread
 
 from .core import Listener, Streamer, Event, Killable
 from .logging import create_logger, debug_handler, default_handler
-from .socket import SocketStreamer, SocketListener
+try:
+    from .socket import SocketListener, SocketStreamer
+except ImportError:
+    SocketListener, SocketStreamer = None, None
 
 
 def _loop(event_queue, listeners, kill_event):
@@ -24,7 +27,6 @@ def _loop(event_queue, listeners, kill_event):
 
 
 class Hive(Killable):
-
     _listener_class = Listener
     _streamer_class = Streamer
     _socket_listener_class = SocketListener
@@ -38,16 +40,17 @@ class Hive(Killable):
 
         self.logger = create_logger(handler=default_handler)
 
-    def add(self, bee):
-        try:
-            assert isinstance(bee, Listener), \
-                'Bee must be an instance of beehive.Listener/beehive.Streamer'
-            self.listeners.add_listener(bee)
-        except AssertionError:
-            assert isinstance(bee, Streamer), \
-                'Bee must be an instance of beehive.Listener/beehive.Streamer'
-            bee.set_queue(self._event_queue)
-            self.streamers.append(bee)
+    def add(self, *bees):
+        for bee in bees:
+            try:
+                assert isinstance(bee, Listener), \
+                    'Bee must be an instance of Listener or Streamer'
+                self.listeners.add_listener(bee)
+            except AssertionError:
+                assert isinstance(bee, Streamer), \
+                    'Bee must be an instance of Listener or Streamer'
+                bee.set_queue(self._event_queue)
+                self.streamers.append(bee)
 
     def listener(self, chain=None, filters=None, **kwargs):
         # for single decorator usage 'chain' is the on_event function
@@ -79,6 +82,9 @@ class Hive(Killable):
             return wrapper
 
     def socket_listener(self, address, chain=None, filters=None):
+        if self._socket_listener_class is None:
+            raise RuntimeError('pyzmq required to create beehive sockets')
+
         def wrapped(f):
             return self.listener(
                 chain=chain, filters=filters,
@@ -88,6 +94,9 @@ class Hive(Killable):
         return wrapped
 
     def socket_streamer(self, address, topic=None):
+        if self._socket_streamer_class is None:
+            raise RuntimeError('pyzmq required to create beehive sockets')
+
         def wrapped(f):
             return self.streamer(
                 topic=topic,
@@ -146,11 +155,11 @@ class Hive(Killable):
                     _loop(self._event_queue, self.listeners, self.kill_event)
                 finally:
                     self.logger.info("Shutting down hive...")
+        self.close()
 
     @contextmanager
     def _setup_teardown_listeners(self):
         self.listeners.call_method_recursively('setup')
-        self.logger.debug("Initialized %d listener(s)", len(self.listeners))
         yield
         self.listeners.call_method_recursively('teardown')
 
@@ -168,24 +177,26 @@ class Hive(Killable):
         try:
             streamer.setup()
         except Exception as e:
-            self.logger.exception("Setting up %s - %s", streamer, repr(e))
+            self.logger.exception("setup %s - %s", str(streamer), repr(e))
         else:
-            self.logger.debug("Setting up %s - OK", streamer)
-            streamer.thread = Thread(target=streamer.run)
-            streamer.thread.start()
+            self.logger.debug("setup %s - OK", str(streamer))
+        streamer.thread = Thread(target=streamer.run)
+        streamer.thread.start()
 
     def _teardown_streamer(self, streamer):
         try:
             streamer.kill()
             streamer.teardown()
             streamer.thread.join()
+            self.logger.debug("teardown %s - OK", str(streamer))
         except Exception as e:
-            self.logger.exception("Tearing down %s - %s", streamer, repr(e))
+            self.logger.exception("teardown %s - %s", str(streamer), repr(e))
 
 
 class _ListenerTree:
     def __init__(self):
         self._listeners = defaultdict(list)
+        self.logger = create_logger(name='beehive.hive.listeners')
 
     def __iter__(self):
         for v in self._listeners.values():
@@ -204,18 +215,17 @@ class _ListenerTree:
         else:
             self._listeners[listener.__class__.__name__].append(listener)
 
-    def call_recursively(self, func, *args, **kwargs):
-        results = []
-        for listener in self._recursive_iter():
-            result = func(listener, *args, **kwargs)
-            results.append(result)
-        return results
-
     def call_method_recursively(self, method_name, *args, **kwargs):
         results = []
-        for listener in self._recursive_iter():
-            result = listener.__getattribute__(method_name)(*args, **kwargs)
-            results.append(result)
+        for bee in self._recursive_iter():
+            try:
+                result = bee.__getattribute__(method_name)(*args, **kwargs)
+            except Exception as e:
+                self.logger.exception(
+                    "%s %s - %s", method_name, str(bee), repr(e))
+            else:
+                self.logger.debug("%s %s - OK", method_name, str(bee))
+                results.append(result)
         return results
 
     def chain(self, listener, chain):

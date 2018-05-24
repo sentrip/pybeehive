@@ -20,7 +20,6 @@ def run_in_new_loop(request):
     old_loop = asyncio.get_event_loop()
     loop = asyncio.get_event_loop_policy().new_event_loop()
     asyncio.set_event_loop(loop)
-    request.addfinalizer(loop.close)
 
     def wrapped(f, *args, **kwargs):
         result = loop.run_until_complete(f(*args, **kwargs))
@@ -37,6 +36,14 @@ class AsyncTestListener(beehive.async.Listener):
     def __init__(self):
         super(AsyncTestListener, self).__init__()
         self.calls = []
+        self.setup_event = asyncio.Event()
+        self.teardown_event = asyncio.Event()
+
+    async def setup(self):
+        self.setup_event.set()
+
+    async def teardown(self):
+        self.teardown_event.set()
 
     async def failed_on_event(self, event):
         raise Exception
@@ -58,6 +65,14 @@ class AsyncTestStreamer(beehive.async.Streamer):
         self.count = 0
         self.ex = False
         self.i = 0
+        self.setup_event = asyncio.Event()
+        self.teardown_event = asyncio.Event()
+
+    async def setup(self):
+        self.setup_event.set()
+
+    async def teardown(self):
+        self.teardown_event.set()
 
     @async_generator
     async def stream(self):

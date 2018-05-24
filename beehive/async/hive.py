@@ -4,8 +4,11 @@ import inspect
 
 from ..hive import Hive as SyncHive
 from .core import Listener, Streamer
-from .socket import SocketListener, SocketStreamer
 from .utils import AsyncGenerator
+try:
+    from .socket import SocketListener, SocketStreamer
+except ImportError:
+    SocketListener, SocketStreamer = None, None
 
 
 async def _loop_async(event_queue, listeners, kill_event):
@@ -50,9 +53,8 @@ class Hive(SyncHive):
         self._set_loop()
         with self._setup_teardown_streamers() as jobs:
             with self._setup_teardown_listeners():
-                futures = [asyncio.ensure_future(j) for j in jobs]
                 task = asyncio.ensure_future(asyncio.gather(
-                    *futures,
+                    *jobs,
                     _loop_async(
                         self._event_queue, self.listeners, self.kill_event
                     )
@@ -64,9 +66,8 @@ class Hive(SyncHive):
                     pass  # Need explicit catch here
                 finally:
                     self.logger.info("Shutting down hive...")
-                    task.cancel()
-                    for future in futures:
-                        future.cancel()
+        task.cancel()
+        self.close()
 
     def _set_loop(self):
         try:
@@ -78,20 +79,22 @@ class Hive(SyncHive):
 
     @contextmanager
     def _setup_teardown_listeners(self):
-        futures = self.listeners.call_method_recursively('setup')
-        self.loop.run_until_complete(asyncio.gather(*futures))
-        self.logger.debug("Initialized %d listener(s)", len(self.listeners))
+        setup_futures = self.listeners.call_method_recursively('setup')
+        if setup_futures:
+            self.loop.run_until_complete(asyncio.gather(
+                *setup_futures, return_exceptions=True))
         yield
-        futures = self.listeners.call_method_recursively('teardown')
-        self.loop.run_until_complete(asyncio.gather(*futures))
+        teardown_futures = self.listeners.call_method_recursively('teardown')
+        if teardown_futures:
+            self.loop.run_until_complete(asyncio.gather(
+                *teardown_futures, return_exceptions=True))
 
     @contextmanager
     def _setup_teardown_streamers(self):
-        all_jobs = self.loop.run_until_complete(asyncio.gather(
+        jobs = self.loop.run_until_complete(asyncio.gather(
             *[self._setup_streamer(s) for s in self.streamers]
         ))
-
-        yield list(filter(lambda j: False if j is None else True, all_jobs))
+        yield jobs
 
         self.loop.run_until_complete(asyncio.gather(
             *[self._teardown_streamer(s) for s in self.streamers]
@@ -101,14 +104,15 @@ class Hive(SyncHive):
         try:
             await streamer.setup()
         except Exception as e:
-            self.logger.exception("Setting up %s - %s", streamer, repr(e))
+            self.logger.exception("setup %s - %s", streamer, repr(e))
         else:
-            self.logger.debug("Setting up %s - OK", streamer)
-            return streamer.run()
+            self.logger.debug("setup %s - OK", streamer)
+        return streamer.run()
 
     async def _teardown_streamer(self, streamer):
         streamer.kill()
         try:
             await streamer.teardown()
+            self.logger.exception("teardown %s - OK", str(streamer))
         except Exception as e:
-            self.logger.exception("Tearing down %s - %s", streamer, repr(e))
+            self.logger.exception("teardown %s - %s", str(streamer), repr(e))
