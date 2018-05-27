@@ -65,6 +65,11 @@ class Client(Killable):
 
 
 class SocketStreamer(Streamer):
+    """
+
+    :param address:
+    :param topic:
+    """
     def __init__(self, address, topic=None):
         super(SocketStreamer, self).__init__(topic=topic)
         self.server = Server(address)
@@ -84,6 +89,11 @@ class SocketStreamer(Streamer):
 
 
 class SocketListener(Listener):
+    """
+
+    :param address:
+    :param filters:
+    """
     def __init__(self, address, filters=None):
         super(SocketListener, self).__init__(filters=filters)
         self.client = Client(address)
@@ -99,4 +109,9 @@ class SocketListener(Listener):
         self.client.send(result.tostring())
 
     def parse_event(self, event):
-        return event
+        """
+
+        :param event:
+        :return:
+        """
+        return event  # pragma: nocover

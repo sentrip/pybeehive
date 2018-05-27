@@ -125,4 +125,4 @@ class SocketListener(Listener):
         await self.client.send(event.tostring())
 
     async def parse_event(self, event):
-        return event
+        return event  # pragma: nocover

@@ -5,8 +5,8 @@ import time
 import pytest
 import _thread
 
-from beehive.async.socket import SocketListener, SocketStreamer
-import beehive
+from pybeehive.async.socket import SocketListener, SocketStreamer
+import pybeehive
 
 
 def test_no_zmq(async_hive):
@@ -46,12 +46,12 @@ def test_socket_streamer_listener_loop(async_hive):
 
     @async_hive.socket_listener(address)
     async def parse_event(event):
-        event = beehive.Event(event.data + 1, created_at=event.created_at)
+        event = pybeehive.Event(event.data + 1, created_at=event.created_at)
         events.append(event)
         return event
 
     async_hive.add(SocketStreamer(address))
-    async_hive.submit_event(beehive.Event(-1))
+    async_hive.submit_event(pybeehive.Event(-1))
     async_hive.run(threaded=True)
     start = time.time()
     while len(events) < 5 and time.time() - start < 2:
@@ -68,7 +68,7 @@ def test_multiple_listeners_single_streamer(async_hive):
 
     class Listener(SocketListener):
         async def parse_event(self, event):
-            event = beehive.Event(event.data + 1, created_at=event.created_at)
+            event = pybeehive.Event(event.data + 1, created_at=event.created_at)
             events.append(event)
             return event
 
@@ -76,7 +76,7 @@ def test_multiple_listeners_single_streamer(async_hive):
     for _ in range(3):
         async_hive.add(Listener(address))
 
-    async_hive.submit_event(beehive.Event(-1))
+    async_hive.submit_event(pybeehive.Event(-1))
     async_hive.run(threaded=True)
     start = time.time()
     while len(events) < 12 and time.time() - start < 2:
@@ -101,7 +101,7 @@ def test_message_closed_server(async_hive):
         events.append(event)
         return event
 
-    async_hive.submit_event(beehive.Event(-1))
+    async_hive.submit_event(pybeehive.Event(-1))
     async_hive.run(threaded=True)
     start = time.time()
     while len(events) < 1 and time.time() - start < 2:
@@ -133,7 +133,7 @@ def test_interrupted_streamer_listener_loop(async_hive):
     listener.parse_event = parse_event
     async_hive.add(streamer)
     async_hive.add(listener)
-    async_hive.submit_event(beehive.Event(-1))
+    async_hive.submit_event(pybeehive.Event(-1))
     Thread(target=interrupt).start()
     async_hive.run()
     assert len(events) > 1, "Listener did not receive any events from streamer"

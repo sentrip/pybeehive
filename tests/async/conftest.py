@@ -2,10 +2,10 @@ import asyncio
 import random
 import pytest
 import sys, os
-sys.path.append(os.path.abspath('../beehive'))
-import beehive.async
-import beehive.async.socket
-from beehive.async.utils import async_generator
+sys.path.append(os.path.abspath('../pybeehive'))
+import pybeehive
+import pybeehive.async.socket
+from pybeehive.async.utils import async_generator
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def run_in_new_loop(request):
 # Listener / Streamer
 # ===================
 
-class AsyncTestListener(beehive.async.Listener):
+class AsyncTestListener(pybeehive.async.Listener):
     def __init__(self):
         super(AsyncTestListener, self).__init__()
         self.calls = []
@@ -53,13 +53,8 @@ class AsyncTestListener(beehive.async.Listener):
         await asyncio.sleep(0)
         return event
 
-    async def multiprocess_on_event(self, event):
-        with open(str(event.data) + '.txt', 'w') as f:
-            f.write('success')
-        await asyncio.sleep(0)
 
-
-class AsyncTestStreamer(beehive.async.Streamer):
+class AsyncTestStreamer(pybeehive.async.Streamer):
     def __init__(self):
         super(AsyncTestStreamer, self).__init__()
         self.count = 0
@@ -99,12 +94,12 @@ class AsyncTestStreamer(beehive.async.Streamer):
         self.ex = True
 
 
-class PrePython36Streamer(beehive.async.Streamer):
+class PrePython36Streamer(pybeehive.async.Streamer):
     def __init__(self):
         super(PrePython36Streamer, self).__init__()
         self.i = 0
 
-    @beehive.async.async_generator
+    @async_generator
     async def stream(self):
         self.i += 1
         if self.i <= 12:
@@ -137,7 +132,7 @@ def async_bee_factory(request):
 
 @pytest.fixture
 def async_hive():
-    return beehive.async.Hive()
+    return pybeehive.async.Hive()
 
 
 # Socket client/server
@@ -147,8 +142,8 @@ def async_hive():
 def async_client_server():
     loop = asyncio.get_event_loop()
     port = random.randint(7000, 10000)
-    server = beehive.async.socket.Server(('127.0.0.1', port))
-    client = beehive.async.socket.Client(('127.0.0.1', port))
+    server = pybeehive.async.socket.Server(('127.0.0.1', port))
+    client = pybeehive.async.socket.Client(('127.0.0.1', port))
     loop.run_until_complete(server.start())
     loop.run_until_complete(client.connect())
     return client, server

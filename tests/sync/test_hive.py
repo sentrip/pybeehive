@@ -4,7 +4,7 @@ from threading import Thread, Event
 import time
 import _thread
 import pytest
-import beehive
+import pybeehive
 
 
 def run_kill_hive(hive, **kwargs):
@@ -28,7 +28,7 @@ def test_run(hive, bee_factory):
     # but this should never cause errors
     run_kill_hive(hive, debug=True)
     assert len(listener.calls) > 0, 'Run did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Run did not wrap non event data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Run did not wrap non event data'
 
 
 def test_decorated_listener(hive):
@@ -38,7 +38,7 @@ def test_decorated_listener(hive):
     def on_event(event):
         calls.append(event)
     assert len(hive.listeners) == 1, 'Did not register listener to hive'
-    hive.submit_event(beehive.Event('test'))
+    hive.submit_event(pybeehive.Event('test'))
     run_kill_hive(hive)
     assert len(calls) == 1, 'Listener did not execute on_event'
     assert calls[0].data == 'test', 'Listener did not return correct data'
@@ -58,7 +58,7 @@ def test_decorated_listener_chained(hive):
     assert len(hive.listeners) == 1, 'Added chained listener to root list of listeners'
     assert len(hive.listeners._listeners['listener1'][0].chained_bees) == 1,\
         'Did not correctly chain listeners'
-    hive.submit_event(beehive.Event('test'))
+    hive.submit_event(pybeehive.Event('test'))
     run_kill_hive(hive)
     assert len(chained_calls) == 1, 'Chained listener did not execute on_event'
 
@@ -83,8 +83,8 @@ def test_decorated_listener_chained_multi(hive):
         'Did not correctly chain listeners'
     assert len(hive.listeners._listeners['listener2'][0].chained_bees) == 1,\
         'Did not correctly chain listeners'
-    hive.submit_event(beehive.Event('test1', topic='topic1'))
-    hive.submit_event(beehive.Event('test2', topic='topic2'))
+    hive.submit_event(pybeehive.Event('test1', topic='topic1'))
+    hive.submit_event(pybeehive.Event('test2', topic='topic2'))
     run_kill_hive(hive)
     assert len(chained_calls) == 2, 'Chained listener did not execute on_event from both chains'
 
@@ -101,8 +101,8 @@ def test_decorated_listener_with_filters(hive):
     def listener2(event):
         filtered_calls.append(event)
 
-    hive.submit_event(beehive.Event('test'))
-    hive.submit_event(beehive.Event('test1', topic='topic1'))
+    hive.submit_event(pybeehive.Event('test'))
+    hive.submit_event(pybeehive.Event('test1', topic='topic1'))
     run_kill_hive(hive)
     assert len(all_calls) == 2, 'Unfiltered listener did not execute all on_event calls'
     assert len(filtered_calls) == 1, 'Filtered listener did executed on_event when it shouldnt'
@@ -126,8 +126,8 @@ def test_decorated_listener_chained_with_filters(hive):
         event.data = 'listener3'
         topic2_calls.append(event)
 
-    hive.submit_event(beehive.Event('test1', topic='topic1'))
-    hive.submit_event(beehive.Event('test2', topic='topic2'))
+    hive.submit_event(pybeehive.Event('test1', topic='topic1'))
+    hive.submit_event(pybeehive.Event('test2', topic='topic2'))
     run_kill_hive(hive)
     assert len(topic1_calls) == 1, 'Chained filtered listener did not execute on_event'
     assert len(topic2_calls) == 1, 'Chained filtered listener did not execute on_event'
@@ -146,7 +146,7 @@ def test_decorated_streamer(hive, bee_factory):
     assert len(hive.streamers) == 1, 'Did not register streamer to hive'
     run_kill_hive(hive)
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
 
 def test_decorated_streamer_with_topic(hive, bee_factory):
@@ -204,7 +204,7 @@ def test_threaded_run(hive, bee_factory):
     stop.wait()
     hive.kill()
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
 
 def test_close_hive(hive):

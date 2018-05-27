@@ -12,9 +12,9 @@ debug_handler.setFormatter(
 default_handler = logging.NullHandler()
 
 
-def create_logger(name='beehive.hive', handler=None):
+def create_logger(name='pybeehive.hive', handler=None):
     logger = logging.getLogger(name)
-    if name == 'beehive.hive':
+    if name == 'pybeehive.hive':
         logger.propagate = False
     # set handler only for logger in top level module
     if handler:

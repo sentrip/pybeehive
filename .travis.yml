@@ -23,5 +23,5 @@ deploy:
     secure: PLEASE_REPLACE_ME
   on:
     tags: true
-    repo: sentrip/beehive
+    repo: sentrip/pybeehive
     python: 3.6

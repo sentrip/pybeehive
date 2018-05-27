@@ -8,8 +8,9 @@ from .core import Listener, Streamer, Event, Killable
 from .logging import create_logger, debug_handler, default_handler
 try:
     from .socket import SocketListener, SocketStreamer
-except ImportError:
-    SocketListener, SocketStreamer = None, None
+# This is tested, just not by patching imports
+except ImportError:  # pragma: nocover
+    SocketListener, SocketStreamer = None, None  # pragma: nocover
 
 
 def _loop(event_queue, listeners, kill_event):
@@ -27,6 +28,9 @@ def _loop(event_queue, listeners, kill_event):
 
 
 class Hive(Killable):
+    """
+
+    """
     _listener_class = Listener
     _streamer_class = Streamer
     _socket_listener_class = SocketListener
@@ -41,6 +45,10 @@ class Hive(Killable):
         self.logger = create_logger(handler=default_handler)
 
     def add(self, *bees):
+        """
+
+        :param bees:
+        """
         for bee in bees:
             try:
                 assert isinstance(bee, Listener), \
@@ -53,6 +61,13 @@ class Hive(Killable):
                 self.streamers.append(bee)
 
     def listener(self, chain=None, filters=None, **kwargs):
+        """
+
+        :param chain:
+        :param filters:
+        :param kwargs:
+        :return:
+        """
         # for single decorator usage 'chain' is the on_event function
         if inspect.isfunction(chain):
             self._create_listener(chain, **kwargs)
@@ -70,6 +85,12 @@ class Hive(Killable):
             return wrapper
 
     def streamer(self, topic=None, **kwargs):
+        """
+
+        :param topic:
+        :param kwargs:
+        :return:
+        """
         # for single decorator usage 'topic' is the stream function
         if inspect.isfunction(topic):
             self._create_streamer(topic, **kwargs)
@@ -82,8 +103,15 @@ class Hive(Killable):
             return wrapper
 
     def socket_listener(self, address, chain=None, filters=None):
+        """
+
+        :param address:
+        :param chain:
+        :param filters:
+        :return:
+        """
         if self._socket_listener_class is None:
-            raise RuntimeError('pyzmq required to create beehive sockets')
+            raise RuntimeError('pyzmq required to create pybeehive sockets')
 
         def wrapped(f):
             return self.listener(
@@ -94,8 +122,14 @@ class Hive(Killable):
         return wrapped
 
     def socket_streamer(self, address, topic=None):
+        """
+
+        :param address:
+        :param topic:
+        :return:
+        """
         if self._socket_streamer_class is None:
-            raise RuntimeError('pyzmq required to create beehive sockets')
+            raise RuntimeError('pyzmq required to create pybeehive sockets')
 
         def wrapped(f):
             return self.streamer(
@@ -106,10 +140,21 @@ class Hive(Killable):
         return wrapped
 
     def submit_event(self, event):
+        """
+
+        :param event:
+        :return:
+        """
         assert isinstance(event, Event), "Can only submit Events to the Hive"
         self._event_queue.put_nowait(event)
 
     def run(self, threaded=False, debug=False):
+        """
+
+        :param threaded:
+        :param debug:
+        :return:
+        """
         if debug:
             self.logger.addHandler(debug_handler)
         if threaded:
@@ -120,6 +165,10 @@ class Hive(Killable):
             self._run()
 
     def close(self):
+        """
+
+        :return:
+        """
         self.kill()
         for streamer in self.streamers:
             streamer.kill()
@@ -196,7 +245,7 @@ class Hive(Killable):
 class _ListenerTree:
     def __init__(self):
         self._listeners = defaultdict(list)
-        self.logger = create_logger(name='beehive.hive.listeners')
+        self.logger = create_logger(name='pybeehive.hive.listeners')
 
     def __iter__(self):
         for v in self._listeners.values():

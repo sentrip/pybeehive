@@ -7,7 +7,7 @@ from .utils import AsyncContextManager
 class Listener(SyncListener):
     @abstractmethod
     async def on_event(self, event):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: nocover
 
     async def notify(self, event):
         if event:
@@ -33,7 +33,7 @@ class Streamer(SyncStreamer):
 
     @abstractmethod
     async def stream(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: nocover
 
     async def setup(self):
         pass

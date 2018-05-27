@@ -1,5 +1,5 @@
 import time
-import beehive
+import pybeehive
 from multiprocessing import Queue
 import pytest
 
@@ -29,36 +29,36 @@ test_event_data = [
 @pytest.mark.parametrize('data,topic,created_at', test_event_data)
 def test_event_string_conversion(data, topic, created_at):
     # for data, created_at, topic in test_event_data:
-    event = beehive.Event(data, topic=topic, created_at=created_at)
+    event = pybeehive.Event(data, topic=topic, created_at=created_at)
     event_string = event.tostring()
-    c_event = beehive.Event.fromstring(event_string)
+    c_event = pybeehive.Event.fromstring(event_string)
     assert event == c_event, "String converted event not equal to original"
 
 
 def test_create_event_id():
     now = time.time()
-    id_1 = beehive.Event.create_id('test', now)
-    id_2 = beehive.Event.create_id('test', now)
-    id_3 = beehive.Event.create_id('test', now + 1)
+    id_1 = pybeehive.Event.create_id('test', now)
+    id_2 = pybeehive.Event.create_id('test', now)
+    id_3 = pybeehive.Event.create_id('test', now + 1)
     assert id_1 == id_2, 'Different ids for identical data'
     assert id_1 != id_3 != id_2, 'Same ids for different data'
 
 
 def test_create_event():
     now = time.time()
-    same_1 = beehive.Event('test', created_at=now)
-    same_2 = beehive.Event(same_1)
+    same_1 = pybeehive.Event('test', created_at=now)
+    same_2 = pybeehive.Event(same_1)
     assert same_1 == same_2, \
         "Event did not create correctly from another Event"
-    diff_1 = beehive.Event('test', topic='1', created_at=now)
-    diff_2 = beehive.Event('test', topic='2', created_at=now)
-    diff_3 = beehive.Event('test', topic='1', created_at=now + 1)
-    diff_4 = beehive.Event('test1', topic='1', created_at=now)
+    diff_1 = pybeehive.Event('test', topic='1', created_at=now)
+    diff_2 = pybeehive.Event('test', topic='2', created_at=now)
+    diff_3 = pybeehive.Event('test', topic='1', created_at=now + 1)
+    diff_4 = pybeehive.Event('test1', topic='1', created_at=now)
     assert diff_1 != diff_2, "Events with different topics equal"
     assert diff_2 != diff_3, "Events with different created_at equal"
     assert diff_3 != diff_4, "Events with different data equal"
-    diff_5 = beehive.Event(diff_1, topic='2')
-    diff_6 = beehive.Event(diff_1, created_at=now + 1)
+    diff_5 = pybeehive.Event(diff_1, topic='2')
+    diff_6 = pybeehive.Event(diff_1, created_at=now + 1)
     assert diff_1 != diff_5, "Event created from event with new topic equal"
     assert diff_1 != diff_6, "Event created from event with new time equal"
     assert diff_5.topic == '2', 'Did not override topic correctly'
@@ -67,11 +67,11 @@ def test_create_event():
 
 def test_event_dunder_methods():
     now = time.time()
-    event_1_a = beehive.Event('test_1', created_at=now)
-    event_1_b = beehive.Event('test_1', created_at=now)
-    event_1_c = beehive.Event('test_1', created_at=now, topic='thing')
-    event_2 = beehive.Event('test_1', created_at=now + 1)
-    event_3 = beehive.Event('test_2', created_at=now)
+    event_1_a = pybeehive.Event('test_1', created_at=now)
+    event_1_b = pybeehive.Event('test_1', created_at=now)
+    event_1_c = pybeehive.Event('test_1', created_at=now, topic='thing')
+    event_2 = pybeehive.Event('test_1', created_at=now + 1)
+    event_3 = pybeehive.Event('test_2', created_at=now)
     assert event_1_a == event_1_b, "Identical events not equal"
     assert event_1_a != event_1_c, "Events with different topics equal"
     assert event_1_a != event_2, "Events with different times equal"
@@ -96,7 +96,7 @@ def test_stream(bee_factory):
     count = 0
     while not q.empty():
         event = q.get()
-        assert isinstance(event, beehive.Event), 'Did not wrap non event data'
+        assert isinstance(event, pybeehive.Event), 'Did not wrap non event data'
         assert event.data == count, 'Stream did not yield correct data'
         count += 1
     assert count == 10, 'Stream did not yield correct number of events'
@@ -113,7 +113,7 @@ def test_stream_with_exception(bee_factory):
     count = 0
     while not q.empty():
         event = q.get()
-        assert isinstance(event, beehive.Event), 'Did not wrap non event data'
+        assert isinstance(event, pybeehive.Event), 'Did not wrap non event data'
         assert event.data == count, 'Stream did not yield correct data'
         count += 1
     assert count == 3, 'Stream did not yield correct number of events'
@@ -122,12 +122,12 @@ def test_stream_with_exception(bee_factory):
 def test_filter(bee_factory):
     non_filtered = bee_factory.create('listener')
     filtered = bee_factory.create('listener', filters=['topic1'])
-    no_topic = beehive.Event('data')
+    no_topic = pybeehive.Event('data')
     non_filtered.notify(no_topic)
     assert len(non_filtered.calls) == 1, "Listener with no filters did not call on_event"
     filtered.notify(no_topic)
     assert len(filtered.calls) == 0, "Listener with filters called on_event for an event with no topic"
-    topic = beehive.Event('data', topic='topic1')
+    topic = pybeehive.Event('data', topic='topic1')
     non_filtered.notify(topic)
     assert len(non_filtered.calls) == 2, "Listener with no filters did not call on_event"
     filtered.notify(topic)
@@ -152,8 +152,8 @@ def test_chained_notify(bee_factory):
     listener1.notify(1)
     assert len(listener2.calls) == 1, 'First chained on_event did not trigger'
     assert len(listener3.calls) == 1, 'Second chained on_event did not trigger'
-    assert isinstance(listener2.calls[0], beehive.Event), 'Did convert data to event in chained on_event'
-    assert isinstance(listener3.calls[0], beehive.Event), 'Did convert data to event in chained on_event'
+    assert isinstance(listener2.calls[0], pybeehive.Event), 'Did convert data to event in chained on_event'
+    assert isinstance(listener3.calls[0], pybeehive.Event), 'Did convert data to event in chained on_event'
     listener1.notify(None)
     assert len(listener2.calls) == 1, 'First chained on_event triggered on None'
     assert len(listener3.calls) == 1, 'Second chained on_event triggered on None'
@@ -170,7 +170,7 @@ def test_chained_notify_with_exception(bee_factory):
     listener2 = bee_factory.create('listener', failing=True)
     listener3 = bee_factory.create('listener', failing=True)
     # Ensure both ways of calling work
-    beehive.Listener.chain([listener1], listener2).chain(listener3)
+    pybeehive.Listener.chain([listener1], listener2).chain(listener3)
     listener1.notify(1)
     assert len(listener2.calls) == 0, 'First chained on_event triggered'
     assert len(listener3.calls) == 0, 'Second chained on_event triggered'

@@ -1,4 +1,4 @@
-Welcome to beehive's documentation!
+Welcome to pybeehive's documentation!
 ======================================
 
 .. toctree::

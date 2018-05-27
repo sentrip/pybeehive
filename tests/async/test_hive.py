@@ -1,13 +1,12 @@
 from threading import Thread, Event as _Event
 import asyncio
 import time
-import pytest
 import _thread
 
-import beehive
-import beehive.async
-from beehive.async import async_generator
-from beehive.async.hive import _loop_async
+import pybeehive
+import pybeehive.async
+from pybeehive.async import async_generator
+from pybeehive.async.hive import _loop_async
 
 
 def run_kill_hive(hive, wait=0.005):
@@ -38,7 +37,7 @@ def test_run(async_hive, async_bee_factory):
     async_hive.add(streamer)
     run_kill_hive(async_hive)
     assert len(listener.calls) > 0, 'Run did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Run did not wrap non event data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Run did not wrap non event data'
 
 
 def test_decorated_listener(async_hive):
@@ -50,7 +49,7 @@ def test_decorated_listener(async_hive):
         await asyncio.sleep(0)
 
     assert len(async_hive.listeners) == 1, 'Did not register listener to hive'
-    async_hive.submit_event(beehive.Event('test'))
+    async_hive.submit_event(pybeehive.Event('test'))
     run_kill_hive(async_hive)
     assert len(calls) == 1, 'Listener did not execute on_event'
     assert calls[0].data == 'test', 'Listener did not return correct data'
@@ -74,7 +73,7 @@ def test_decorated_streamer(async_hive, async_bee_factory):
     assert len(async_hive.streamers) == 1, 'Did not register streamer to hive'
     run_kill_hive(async_hive)
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
 
 def test_decorated_streamer_pre_python36(async_hive, async_bee_factory):
@@ -94,7 +93,7 @@ def test_decorated_streamer_pre_python36(async_hive, async_bee_factory):
     assert len(async_hive.streamers) == 1, 'Did not register streamer to hive'
     run_kill_hive(async_hive)
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
 
 def test_decorated_streamer_pre_python36_closure(async_hive, async_bee_factory):
@@ -117,7 +116,7 @@ def test_decorated_streamer_pre_python36_closure(async_hive, async_bee_factory):
     assert len(async_hive.streamers) == 1, 'Did not register streamer to hive'
     run_kill_hive(async_hive)
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
 
 def test_only_streamers(async_hive):
@@ -168,7 +167,7 @@ def test_threaded_run(async_hive, async_bee_factory):
     stop.wait()
     async_hive.close()
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
-    assert isinstance(listener.calls[0], beehive.Event), 'Streamer did not yield correct data'
+    assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
 
 def test_close_hive(async_hive):

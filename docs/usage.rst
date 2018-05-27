@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use beehive in a project::
+To use pybeehive in a project::
 
-    import beehive
+    import pybeehive

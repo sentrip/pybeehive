@@ -7,8 +7,9 @@ from .core import Listener, Streamer
 from .utils import AsyncGenerator
 try:
     from .socket import SocketListener, SocketStreamer
-except ImportError:
-    SocketListener, SocketStreamer = None, None
+# This is tested, just not by patching imports
+except ImportError:  # pragma: nocover
+    SocketListener, SocketStreamer = None, None  # pragma: nocover
 
 
 async def _loop_async(event_queue, listeners, kill_event):

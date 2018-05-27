@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Top-level package for beehive."""
+"""Top-level package for pybeehive."""
 from .core import Event, Listener, Streamer
 from .hive import Hive
 

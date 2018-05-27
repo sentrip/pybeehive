@@ -4,8 +4,8 @@ import time
 import pytest
 import _thread
 
-from beehive.socket import SocketStreamer, SocketListener
-import beehive
+from pybeehive.socket import SocketStreamer, SocketListener
+import pybeehive
 
 
 def test_no_zmq(hive):
@@ -42,12 +42,12 @@ def test_socket_streamer_listener_decorator_definition(hive):
 
     @hive.socket_listener(address)
     def parse_event(event):
-        event = beehive.Event(event.data + 1, created_at=event.created_at)
+        event = pybeehive.Event(event.data + 1, created_at=event.created_at)
         events.append(event)
         return event
 
     hive.add(SocketStreamer(address))
-    hive.submit_event(beehive.Event(-1))
+    hive.submit_event(pybeehive.Event(-1))
     hive.run(threaded=True)
     start = time.time()
     while len(events) < 5 and time.time() - start < 2:
@@ -64,12 +64,12 @@ def test_socket_streamer_listener_loop(hive):
 
     @hive.socket_listener(address)
     def parse_event(event):
-        event = beehive.Event(event.data + 1, created_at=event.created_at)
+        event = pybeehive.Event(event.data + 1, created_at=event.created_at)
         events.append(event)
         return event
 
     hive.add(SocketStreamer(address))
-    hive.submit_event(beehive.Event(-1))
+    hive.submit_event(pybeehive.Event(-1))
     hive.run(threaded=True)
     start = time.time()
     while len(events) < 5 and time.time() - start < 2:
@@ -87,7 +87,7 @@ def test_multiple_listeners_single_streamer(hive):
 
     class Listener(SocketListener):
         def parse_event(self, event):
-            event = beehive.Event(event.data + 1, created_at=event.created_at)
+            event = pybeehive.Event(event.data + 1, created_at=event.created_at)
             events.append(event)
             return event
 
@@ -95,7 +95,7 @@ def test_multiple_listeners_single_streamer(hive):
     for _ in range(3):
         hive.add(Listener(address))
 
-    hive.submit_event(beehive.Event(-1))
+    hive.submit_event(pybeehive.Event(-1))
     hive.run(threaded=True)
     start = time.time()
     while len(events) < 12 and time.time() - start < 2:
@@ -120,7 +120,7 @@ def test_message_closed_server(hive):
         events.append(event)
         return event
 
-    hive.submit_event(beehive.Event(-1))
+    hive.submit_event(pybeehive.Event(-1))
     hive.run(threaded=True)
     start = time.time()
     while len(events) < 1 and time.time() - start < 2:
@@ -147,7 +147,7 @@ def test_interrupted_streamer_listener_loop(hive):
     listener.parse_event = parse_event
     hive.add(streamer)
     hive.add(listener)
-    hive.submit_event(beehive.Event(-1))
+    hive.submit_event(pybeehive.Event(-1))
     Thread(target=interrupt).start()
     hive.run()
     assert len(events) > 1, "Listener did not receive any events from streamer"

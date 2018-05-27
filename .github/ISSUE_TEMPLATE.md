@@ -1,4 +1,4 @@
-* beehive version:
+* pybeehive version:
 * Python version:
 * Operating System:
 

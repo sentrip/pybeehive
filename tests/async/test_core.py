@@ -1,7 +1,6 @@
 import asyncio
-import pytest
-import beehive
-import beehive.async
+import pybeehive
+import pybeehive.async
 
 
 def test_stream(async_bee_factory, run_in_loop):
@@ -13,7 +12,7 @@ def test_stream(async_bee_factory, run_in_loop):
     count = 0
     while not q.empty():
         event = q.get_nowait()
-        assert isinstance(event, beehive.Event), 'Stream did not wrap non event data'
+        assert isinstance(event, pybeehive.Event), 'Stream did not wrap non event data'
         assert event.data == count, 'Stream did not yield correct data'
         count += 1
     assert count == 10, 'Stream did not yield correct number of events'
@@ -46,7 +45,7 @@ def test_stream_with_exception(async_bee_factory, run_in_loop):
     count = 0
     while not q.empty():
         event = q.get_nowait()
-        assert isinstance(event, beehive.Event), 'Stream did not wrap non event data'
+        assert isinstance(event, pybeehive.Event), 'Stream did not wrap non event data'
         assert event.data == count, 'Stream did not yield correct data'
         count += 1
     assert count == 3, 'Stream did not yield correct number of events'
@@ -67,8 +66,8 @@ def test_chained_notify(async_bee_factory, run_in_loop):
     run_in_loop(listener1.notify, 1)
     assert len(listener2.calls) == 1, 'First chained on_event did not trigger'
     assert len(listener3.calls) == 1, 'Second chained on_event did not trigger'
-    assert isinstance(listener2.calls[0], beehive.Event), 'Did convert data to event in chained on_event'
-    assert isinstance(listener3.calls[0], beehive.Event), 'Did convert data to event in chained on_event'
+    assert isinstance(listener2.calls[0], pybeehive.Event), 'Did convert data to event in chained on_event'
+    assert isinstance(listener3.calls[0], pybeehive.Event), 'Did convert data to event in chained on_event'
 
 
 def test_notify_with_exception(async_bee_factory, run_in_loop):

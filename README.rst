@@ -1,21 +1,21 @@
-=======
-beehive
-=======
+=========
+pybeehive
+=========
 
 
-.. image:: https://img.shields.io/pypi/v/beehive.svg
-        :target: https://pypi.python.org/pypi/beehive
+.. image:: https://img.shields.io/pypi/v/pybeehive.svg
+        :target: https://pypi.python.org/pypi/pybeehive
 
-.. image:: https://img.shields.io/travis/sentrip/beehive.svg
-        :target: https://travis-ci.org/sentrip/beehive
+.. image:: https://img.shields.io/travis/sentrip/pybeehive.svg
+        :target: https://travis-ci.org/sentrip/pybeehive
 
-.. image:: https://readthedocs.org/projects/beehive/badge/?version=latest
-        :target: https://beehive.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/pybeehive/badge/?version=latest
+        :target: https://pybeehive.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 
-.. image:: https://pyup.io/repos/github/sentrip/beehive/shield.svg
-     :target: https://pyup.io/repos/github/sentrip/beehive/
+.. image:: https://pyup.io/repos/github/sentrip/pybeehive/shield.svg
+     :target: https://pyup.io/repos/github/sentrip/pybeehive/
      :alt: Updates
 
 
@@ -24,7 +24,7 @@ A lightweight, event-driven concurrency library with bees!
 
 
 * Free software: GNU General Public License v3
-* Documentation: https://beehive.readthedocs.io.
+* Documentation: https://pybeehive.readthedocs.io.
 
 
 Features

@@ -2,15 +2,15 @@ from threading import Event as _Event
 import pytest
 import random
 import sys, os
-sys.path.append(os.path.abspath('../beehive'))
-import beehive
-import beehive.socket
+sys.path.append(os.path.abspath('../pybeehive'))
+import pybeehive
+import pybeehive.socket
 
 
 # Listener / Streamer
 # ===================
 
-class TestListener(beehive.Listener):
+class TestListener(pybeehive.Listener):
     def __init__(self, filters=None):
         super(TestListener, self).__init__(filters=filters)
         self.calls = []
@@ -32,12 +32,8 @@ class TestListener(beehive.Listener):
         self.calls.append(event)
         return event
 
-    def multiprocess_on_event(self, event):
-        with open(str(event.data) + '.txt', 'w') as f:
-            f.write('success')
 
-
-class TestStreamer(beehive.Streamer):
+class TestStreamer(pybeehive.Streamer):
     def __init__(self, topic=None):
         super(TestStreamer, self).__init__(topic=topic)
         self.count = 0
@@ -90,14 +86,14 @@ def bee_factory(request):
 
 @pytest.fixture
 def hive():
-    return beehive.Hive()
+    return pybeehive.Hive()
 
 
 @pytest.fixture
 def client_server(request):
     port = random.randint(7000, 10000)
-    server = beehive.socket.Server(('127.0.0.1', port))
-    client = beehive.socket.Client(('127.0.0.1', port))
+    server = pybeehive.socket.Server(('127.0.0.1', port))
+    client = pybeehive.socket.Client(('127.0.0.1', port))
     server.start()
     client.connect()
     request.addfinalizer(lambda: (client.shutdown(), server.shutdown()))
