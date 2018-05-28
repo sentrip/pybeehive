@@ -11,3 +11,8 @@ History
 ------------------
 
 * Fixed installation of dependencies
+
+0.12 (2018-05-28)
+------------------
+
+* Fixed travis-ci building with coverage
