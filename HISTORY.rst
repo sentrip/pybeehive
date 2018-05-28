@@ -16,3 +16,8 @@ History
 ------------------
 
 * Fixed travis-ci building with coverage
+
+0.13 (2018-05-28)
+------------------
+
+* Coverage now only runs on travis-ci with only pybeehive source code

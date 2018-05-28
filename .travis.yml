@@ -2,7 +2,9 @@ language: python
 python:
 - 3.6
 - 3.5
-install: pip install -U tox-travis
+install:
+- pip install -U tox-travis
+- pip install -U codecov
 script: tox
 deploy:
   provider: pypi
@@ -14,3 +16,4 @@ deploy:
     tags: true
     repo: sentrip/pybeehive
     python: 3.6
+after_success: codecov -t b569efae-f7cb-45b9-9977-0c44188e3381
