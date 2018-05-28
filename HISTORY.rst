@@ -6,3 +6,8 @@ History
 ------------------
 
 * First release on PyPI.
+
+0.11 (2018-05-28)
+------------------
+
+* Fixed installation of dependencies
