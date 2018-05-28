@@ -190,19 +190,23 @@ def test_only_streamers(hive):
 
 
 def test_threaded_run(hive, bee_factory):
-    listener = bee_factory.create('listener')
-    hive.add(listener)
     stop = _Event()
+    listener = bee_factory.create('listener')
+    streamer = bee_factory.create('streamer')
+    old_on_event = listener.on_event
 
-    @hive.streamer
-    def stream():
-        for i in range(5):
-            yield i
-        time.sleep(0.001)
-        stop.set()
+    def on_event(event):
+        if not stop.is_set():
+            stop.set()
+        else:
+            hive.kill()
+        return old_on_event(event)
+
+    listener.on_event = on_event
+    hive.add(listener)
+    hive.add(streamer)
     hive.run(threaded=True)
     stop.wait()
-    hive.kill()
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
     assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 

@@ -146,26 +146,24 @@ def test_only_streamers(async_hive):
 
 
 def test_threaded_run(async_hive, async_bee_factory):
-    listener = async_bee_factory.create('listener')
-    async_hive.add(listener)
     stop = _Event()
-    i = 0
+    listener = async_bee_factory.create('listener')
+    streamer = async_bee_factory.create('streamer')
+    old_on_event = listener.on_event
 
-    @async_hive.streamer
-    @async_generator
-    async def stream():
-        nonlocal i
-        await asyncio.sleep(0)
-        i += 1
-        if i < 5:
-            return i
-        await asyncio.sleep(0.001)
-        stop.set()
-        raise StopAsyncIteration
+    async def on_event(event):
+        if not stop.is_set():
+            stop.set()
+        else:
+            async_hive.kill()
+            await asyncio.sleep(0)
+        return await old_on_event(event)
 
+    listener.on_event = on_event
+    async_hive.add(listener)
+    async_hive.add(streamer)
     async_hive.run(threaded=True)
     stop.wait()
-    async_hive.close()
     assert len(listener.calls) > 0, 'Streamer did not yield any events'
     assert isinstance(listener.calls[0], pybeehive.Event), 'Streamer did not yield correct data'
 
