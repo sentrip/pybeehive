@@ -159,6 +159,26 @@ def test_chained_notify(bee_factory):
     assert len(listener3.calls) == 1, 'Second chained on_event triggered on None'
 
 
+def test_chained_notify_conditional(bee_factory):
+    listener1 = bee_factory.create('listener')
+    listener2 = bee_factory.create('listener')
+    listener3 = bee_factory.create('listener')
+    listener1.chain(listener2).chain(listener3)
+
+    def on_event(event):
+        listener2.calls.append(event)
+        if event.data == 2:
+            return event
+
+    listener2.on_event = on_event
+    listener1.notify(1)
+    assert len(listener2.calls) == 1, 'First chained on_event did not trigger'
+    assert len(listener3.calls) == 0, 'Second chained on_event triggered'
+    listener1.notify(2)
+    assert len(listener2.calls) == 2, 'First chained on_event did not trigger'
+    assert len(listener3.calls) == 1, 'Second chained on_event triggered on None'
+
+
 def test_notify_with_exception(bee_factory):
     listener = bee_factory.create('listener', failing=True)
     listener.notify(1)

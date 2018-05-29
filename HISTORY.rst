@@ -21,3 +21,8 @@ History
 ------------------
 
 * Coverage now only runs on travis-ci with only pybeehive source code
+
+0.14 (2018-05-29)
+------------------
+
+* Fixed bug in event propagation

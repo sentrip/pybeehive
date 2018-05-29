@@ -115,12 +115,14 @@ class Listener(ABC):
         """
         if event and self.filter(event):
             try:
-                event = Event(self.on_event(event))
+                result = self.on_event(event)
+                if result is not None:
+                    event = Event(result)
+                    # Only propagate events that this listener can accept
+                    for bee in self.chained_bees:
+                        bee.notify(event)
             except Exception as e:
                 self.on_exception(e)
-            # Only propagate events that this listener can accept
-            for bee in self.chained_bees:
-                bee.notify(event)
 
         if not event:
             for bee in self.chained_bees:
