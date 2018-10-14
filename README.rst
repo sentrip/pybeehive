@@ -7,7 +7,7 @@ pybeehive
     :target: https://pypi.python.org/pypi/pybeehive
 
 .. image:: https://img.shields.io/travis/sentrip/pybeehive.svg
-    :target: https://travis-ci.org/sentrip/pybeehive
+    :target: https://travis-ci.com/sentrip/pybeehive
 
 .. image:: https://readthedocs.org/projects/pybeehive/badge/?version=latest
     :target: https://pybeehive.readthedocs.io/en/latest/?badge=latest
