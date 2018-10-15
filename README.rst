@@ -26,7 +26,7 @@ pybeehive
 A lightweight, event-driven concurrency library with bees!
 
 
-* Free software: GNU General Public License v3
+* Free software: `MIT License <https://github.com/sentrip/pybeehive/blob/master/LICENSE>`_
 * Documentation: https://pybeehive.readthedocs.io.
 
 
@@ -64,12 +64,3 @@ Basic Usage
     Event(created_at=1525400001, data="hello world!")
     Event(created_at=1525400002, data="hello world!")
     ...
-
-
-Credits
--------
-
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
-
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
