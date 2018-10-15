@@ -6,7 +6,7 @@ Subpackages
 
 .. toctree::
 
-    pybeehive.async
+    pybeehive.asyn
 
 Submodules
 ----------

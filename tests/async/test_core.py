@@ -1,6 +1,6 @@
 import asyncio
 import pybeehive
-import pybeehive.async
+import pybeehive.asyn
 
 
 def test_stream(async_bee_factory, run_in_loop):

@@ -5,7 +5,7 @@ import time
 import pytest
 import _thread
 
-from pybeehive.async.socket import SocketListener, SocketStreamer
+from pybeehive.asyn.socket import SocketListener, SocketStreamer
 import pybeehive
 
 

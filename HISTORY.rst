@@ -2,6 +2,12 @@
 History
 =======
 
+0.15 (2018-10-15)
+------------------
+
+* Changed pybeehive.async to pybeehive.asyn for python3.7+ compliance
+
+
 0.14 (2018-05-29)
 ------------------
 

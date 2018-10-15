@@ -35,7 +35,7 @@ setup(
     include_package_data=True,
     keywords='pybeehive',
     name='pybeehive',
-    packages=find_packages(include=['pybeehive', 'pybeehive.async']),
+    packages=find_packages(include=['pybeehive', 'pybeehive.asyn']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,

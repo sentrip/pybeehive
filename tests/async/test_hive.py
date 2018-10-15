@@ -4,9 +4,9 @@ import time
 import _thread
 
 import pybeehive
-import pybeehive.async
-from pybeehive.async import async_generator
-from pybeehive.async.hive import _loop_async
+import pybeehive.asyn
+from pybeehive.asyn import async_generator
+from pybeehive.asyn.hive import _loop_async
 
 
 def run_kill_hive(hive, wait=0.005):

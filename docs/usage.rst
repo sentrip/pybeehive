@@ -36,7 +36,7 @@ Asynchronous:
 
 .. code-block:: python
 
-    from pybeehive.async import Hive
+    from pybeehive.asyn import Hive
     import asyncio
     hive = Hive()
 

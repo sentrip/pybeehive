@@ -4,8 +4,8 @@ import pytest
 import sys, os
 sys.path.append(os.path.abspath('../pybeehive'))
 import pybeehive
-import pybeehive.async.socket
-from pybeehive.async.utils import async_generator
+from pybeehive.asyn.socket import Client, Server
+from pybeehive.asyn.utils import async_generator
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def run_in_new_loop(request):
 # Listener / Streamer
 # ===================
 
-class AsyncTestListener(pybeehive.async.Listener):
+class AsyncTestListener(pybeehive.asyn.Listener):
     def __init__(self):
         super(AsyncTestListener, self).__init__()
         self.calls = []
@@ -54,7 +54,7 @@ class AsyncTestListener(pybeehive.async.Listener):
         return event
 
 
-class AsyncTestStreamer(pybeehive.async.Streamer):
+class AsyncTestStreamer(pybeehive.asyn.Streamer):
     def __init__(self):
         super(AsyncTestStreamer, self).__init__()
         self.count = 0
@@ -94,7 +94,7 @@ class AsyncTestStreamer(pybeehive.async.Streamer):
         self.ex = True
 
 
-class PrePython36Streamer(pybeehive.async.Streamer):
+class PrePython36Streamer(pybeehive.asyn.Streamer):
     def __init__(self):
         super(PrePython36Streamer, self).__init__()
         self.i = 0
@@ -132,7 +132,7 @@ def async_bee_factory(request):
 
 @pytest.fixture
 def async_hive():
-    return pybeehive.async.Hive()
+    return pybeehive.asyn.Hive()
 
 
 # Socket client/server
@@ -142,8 +142,8 @@ def async_hive():
 def async_client_server():
     loop = asyncio.get_event_loop()
     port = random.randint(7000, 10000)
-    server = pybeehive.async.socket.Server(('127.0.0.1', port))
-    client = pybeehive.async.socket.Client(('127.0.0.1', port))
+    server = Server(('127.0.0.1', port))
+    client = Client(('127.0.0.1', port))
     loop.run_until_complete(server.start())
     loop.run_until_complete(client.connect())
     return client, server
