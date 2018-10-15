@@ -1,9 +1,10 @@
 import inspect
 from collections import defaultdict
 from contextlib import contextmanager
-from queue import Queue, Empty
+# from .utils import Queue  # TODO: Optimize queue
+from queue import Queue
+from queue import Empty
 from threading import Thread
-
 from .core import Listener, Streamer, Event, Killable
 from .logging import create_logger, debug_handler, default_handler
 try:
