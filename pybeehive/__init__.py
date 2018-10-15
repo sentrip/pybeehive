@@ -5,7 +5,7 @@ from .hive import Hive
 
 __author__ = """Djordje Pepic"""
 __email__ = 'djordje.m.pepic@gmail.com'
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 __all__ = [
     'Event', 'Listener', 'Streamer',
